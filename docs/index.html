@@ -15,6 +15,11 @@
 <body>
 
 <!-- ====================================================================== -->
+<!-- 0 · Byline                                                              -->
+<!-- ====================================================================== -->
+<div class="masthead">Made by <b>Vivaan Shahani</b></div>
+
+<!-- ====================================================================== -->
 <!-- 1 · Download banner                                                     -->
 <!-- ====================================================================== -->
 <a class="banner" href="stock_analysis.py" download="stock_analysis.py" id="scriptBanner">
@@ -49,13 +54,16 @@
         </div>
 
         <div class="generate-row">
-          <button class="generate" id="generateBtn" disabled>
+          <!-- A real link, so it downloads the workbook even with JavaScript
+               switched off or broken. The script upgrades it in place. -->
+          <a class="generate" id="generateBtn" role="button"
+             href="data/latest.xlsx" download="Stock_Analysis.xlsx">
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <path d="M14 2v6h6M9 13l2 2 4-4"/>
             </svg>
             <span id="generateLabel">Generate today's spreadsheet</span>
-          </button>
+          </a>
           <div class="generate-note" id="generateNote">
             <b>Excel .xlsx</b> · 5 daily tabs · dashboard, rotation, signals<br>
             Rebuilt automatically every weekday after the close.
@@ -309,6 +317,10 @@
           <li>python stock_analysis.py</li>
         </ul>
       </div>
+    </div>
+
+    <div class="signoff">
+      <span>Made by <b>Vivaan Shahani</b></span>
     </div>
 
     <div class="disclaimer">

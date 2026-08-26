@@ -1080,41 +1080,103 @@
   }
 
   /* ------------------------------------------------------------- download */
+  /*
+     This is the button the whole site exists for, so it is deliberately
+     stubborn. It is wired up before the market data is fetched, so it works
+     even if everything else on the page fails to load. A failed fetch is
+     retried once, and if fetching is blocked outright it falls back to a plain
+     link and lets the browser do the downloading itself.
+  */
+
+  function fileName() {
+    var stamp = (state.data && state.data.date)
+      ? state.data.date.slice(5)
+      : new Date().toISOString().slice(5, 10);
+    return "Stock_Analysis_" + stamp + ".xlsx";
+  }
+
+  function saveBlob(blob, name) {
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {   // old Edge
+      window.navigator.msSaveOrOpenBlob(blob, name);
+      return;
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 4000);
+  }
+
+  /* Last resort: hand the URL straight to the browser's own downloader. */
+  function saveByLink(name) {
+    var a = document.createElement("a");
+    a.href = XLSX_URL + "?t=" + Date.now();
+    a.download = name;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); }, 4000);
+  }
+
+  function fetchWorkbook(attempt) {
+    return fetch(XLSX_URL + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.blob();
+      })
+      .then(function (blob) {
+        // A valid .xlsx is a zip file: it must start with the bytes "PK".
+        if (blob.size < 5000) throw new Error("file looks truncated");
+        return blob;
+      })
+      .catch(function (err) {
+        if (attempt < 2) return fetchWorkbook(attempt + 1);
+        throw err;
+      });
+  }
 
   function wireDownload() {
     var btn = $("generateBtn");
     var label = $("generateLabel");
+    var idle = label.textContent;
+    var busy = false;
 
-    btn.addEventListener("click", function () {
-      if (btn.disabled) return;
-      btn.disabled = true;
-      var original = label.textContent;
-      label.textContent = "Building your spreadsheet…";
+    btn.addEventListener("click", function (ev) {
+      // Take over from the plain link so the file can be given today's date in
+      // its name. If anything below throws, the fallbacks still deliver it.
+      ev.preventDefault();
+      if (busy) return;
+      busy = true;
+      btn.classList.add("is-busy");
+      label.textContent = "Building your spreadsheet\u2026";
 
-      fetch(XLSX_URL, { cache: "no-store" })
-        .then(function (res) {
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          return res.blob();
-        })
+      var name = fileName();
+
+      fetchWorkbook(0)
         .then(function (blob) {
-          var name = "Stock_Analysis_" + state.data.date.slice(5) + ".xlsx";
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement("a");
-          a.href = url;
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-          label.textContent = "Downloaded — click again for another copy";
+          saveBlob(blob, name);
+          label.textContent = "Saved \u2014 click again for another copy";
           toast("Saved " + name + " to your Downloads folder.");
-          setTimeout(function () { label.textContent = original; }, 6000);
         })
         .catch(function () {
-          label.textContent = original;
-          toast("Could not fetch the spreadsheet. Try again in a moment.");
+          // Fetching failed. Let the browser fetch it the ordinary way.
+          saveByLink(name);
+          label.textContent = idle;
+          toast("Downloading " + name + " \u2026");
         })
-        .then(function () { btn.disabled = false; });
+        .then(function () {
+          busy = false;
+          btn.classList.remove("is-busy");
+          setTimeout(function () { label.textContent = idle; }, 6000);
+        });
     });
   }
 
@@ -1159,7 +1221,6 @@
     renderSignals();
     renderLeaders();
     renderNews();
-    $("generateBtn").disabled = false;
     openFromHash();
   }
 
@@ -1176,6 +1237,8 @@
     host.appendChild(tr);
   }
 
+  wireDownload();
+
   fetch(DATA_URL, { cache: "no-store" })
     .then(function (res) {
       if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1184,7 +1247,6 @@
     .then(function (data) {
       state.data = data;
       state.rows = data.rows;
-      wireDownload();
       wireControls();
       renderAll();
     })

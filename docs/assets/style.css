@@ -72,6 +72,38 @@ a { color: inherit; }
 .flat { color: var(--text-dim); }
 
 /* ==========================================================================
+   0 · Byline
+   ========================================================================== */
+
+.masthead {
+  position: relative;
+  z-index: 4;
+  padding: 7px 26px;
+  background: #02040a;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+}
+.masthead b { color: var(--text-dim); font-weight: 600; }
+
+.signoff {
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.signoff b { color: var(--text); font-weight: 600; letter-spacing: .1em; }
+
+/* ==========================================================================
    1 · Download banner
    ========================================================================== */
 
@@ -194,12 +226,13 @@ h1 .accent {
   box-shadow: 0 0 0 1px rgba(0,214,143,.5), 0 16px 40px -14px rgba(0, 214, 143, .6);
   transition: transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s ease, filter .16s ease;
 }
-.generate:hover:not(:disabled) {
+.generate { text-decoration: none; }
+.generate:hover:not(.is-busy) {
   transform: translateY(-2px);
   box-shadow: 0 0 0 1px rgba(0,214,143,.65), 0 22px 52px -14px rgba(0, 214, 143, .75);
 }
-.generate:active:not(:disabled) { transform: translateY(0); }
-.generate:disabled { filter: saturate(.35) brightness(.75); cursor: progress; }
+.generate:active:not(.is-busy) { transform: translateY(0); }
+.generate.is-busy { filter: saturate(.4) brightness(.8); cursor: progress; }
 .generate svg { flex: none; }
 
 .generate-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
@@ -629,6 +662,7 @@ footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .hero { padding: 34px 0 20px; }
   .generate { width: 100%; justify-content: center; font-size: 16px; padding: 18px 22px; }
   .banner { font-size: 12px; gap: 9px; padding: 11px 14px; }
+  .masthead { font-size: 9.5px; letter-spacing: .12em; padding: 6px 14px; }
   .banner-tag { display: none; }
   .section { padding: 32px 0; }
 }
