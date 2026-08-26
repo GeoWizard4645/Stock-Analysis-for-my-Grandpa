@@ -146,7 +146,7 @@ a { color: inherit; }
 
 h1 {
   margin: 0 0 14px;
-  font-size: clamp(38px, 5.2vw, 62px);
+  font-size: clamp(32px, 5.2vw, 62px);
   line-height: 1.02;
   letter-spacing: -.035em;
   font-weight: 700;
@@ -622,6 +622,9 @@ footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 }
 @media (max-width: 620px) {
   .wrap { padding: 0 16px; }
+  /* the fund's full name is the first thing to go when space runs out */
+  .tape-row { grid-template-columns: 56px minmax(0,1fr) 76px; }
+  .tape-name { display: none; }
   .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .hero { padding: 34px 0 20px; }
   .generate { width: 100%; justify-content: center; font-size: 16px; padding: 18px 22px; }
