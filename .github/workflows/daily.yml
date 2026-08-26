@@ -1,0 +1,55 @@
+name: Build the daily workbook
+
+# Runs itself on a schedule so the site always has fresh numbers waiting.
+# Times are UTC. 20:15 covers the 4:15pm close during daylight saving,
+# 21:15 covers it the rest of the year, and 17:30 gives a mid-session refresh.
+on:
+  schedule:
+    - cron: "30 17 * * 1-5"
+    - cron: "15 20 * * 1-5"
+    - cron: "15 21 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-workbook
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build the workbook and the site data
+        run: |
+          python stock_analysis.py \
+            --history 5 \
+            --json docs/data/latest.json \
+            --out  docs/data/latest.xlsx
+
+      - name: Refresh the downloadable copies
+        run: cp stock_analysis.py requirements.txt watchlist.json docs/
+
+      - name: Commit whatever changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/latest.json docs/data/latest.xlsx \
+                  docs/stock_analysis.py docs/requirements.txt docs/watchlist.json
+          if git diff --staged --quiet; then
+            echo "Nothing changed — the market data is already current."
+          else
+            git commit -m "Daily workbook: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi

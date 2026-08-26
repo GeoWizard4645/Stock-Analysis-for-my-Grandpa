@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Stock Analysis</title>
+<meta name="description" content="A one-click daily stock analysis workbook — sector strength, moving averages, MACD, Bollinger Bands and news for a 40-name watchlist.">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2304060c'/%3E%3Cpath d='M18 68 L38 44 L54 58 L82 26' stroke='%2300d68f' stroke-width='9' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- ====================================================================== -->
+<!-- 1 · Download banner                                                     -->
+<!-- ====================================================================== -->
+<a class="banner" href="stock_analysis.py" download="stock_analysis.py" id="scriptBanner">
+  <span class="banner-icon">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16"/>
+    </svg>
+  </span>
+  <span class="banner-tag">Python</span>
+  <span class="banner-text">Download the script that builds all of this — one file, free data, no API key.</span>
+  <span class="banner-cta">Get&nbsp;stock_analysis.py&nbsp;→</span>
+</a>
+
+<!-- ====================================================================== -->
+<!-- 2 · Hero                                                                -->
+<!-- ====================================================================== -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">Daily equity analysis</p>
+        <h1>The whole watchlist,<br><span class="accent">done before you sit down.</span></h1>
+        <p class="lede">
+          Eleven sector funds, four index funds and twenty-five stocks — every moving
+          average, Bollinger Band, MACD reading and headline, checked automatically
+          and written into the same spreadsheet you have always used.
+        </p>
+
+        <div class="stamp">
+          <span class="pulse"></span>
+          <span id="stamp">Loading market data…</span>
+        </div>
+
+        <div class="generate-row">
+          <button class="generate" id="generateBtn" disabled>
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6M9 13l2 2 4-4"/>
+            </svg>
+            <span id="generateLabel">Generate today's spreadsheet</span>
+          </button>
+          <div class="generate-note" id="generateNote">
+            <b>Excel .xlsx</b> · 5 daily tabs · dashboard, rotation, signals<br>
+            Rebuilt automatically every weekday after the close.
+          </div>
+        </div>
+      </div>
+
+      <!-- the tape -->
+      <aside class="tape" id="tape">
+        <div class="tape-head">
+          <span>Index &amp; broad market</span>
+          <span id="tapeDate">—</span>
+        </div>
+        <div id="tapeRows"></div>
+      </aside>
+    </div>
+
+    <!-- headline tiles -->
+    <div class="tiles" id="tiles"></div>
+  </div>
+</header>
+
+<!-- ====================================================================== -->
+<!-- 3 · Today's numbers — the preview of what lands in the spreadsheet      -->
+<!-- ====================================================================== -->
+<section class="section" id="preview">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">Preview</p>
+        <h2>Today's numbers</h2>
+        <p>
+          This is exactly what goes into the spreadsheet — the same eleven questions,
+          in the same order, answered off the closing prices. Green is yes, red is no,
+          amber means the two numbers were too close to call.
+        </p>
+      </div>
+      <div class="filters" id="previewFilters"></div>
+    </div>
+
+    <div class="panel">
+      <div class="scroller">
+        <table id="previewTable">
+          <thead id="previewHead"></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="divider"><span>Terminal</span></div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- 4 · Market pulse                                                        -->
+<!-- ====================================================================== -->
+<section class="section" id="pulse">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">01 — Market pulse</p>
+        <h2>How the tape closed</h2>
+        <p>Breadth is the share of the watchlist that finished higher. When it and the
+           average score point the same way, the move is real.</p>
+      </div>
+    </div>
+
+    <div class="pulse-grid">
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Breadth</span></div>
+        <div class="panel-body">
+          <div class="donut-wrap">
+            <div id="donut"></div>
+            <div class="donut-legend" id="donutLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Advancers vs decliners</span>
+          <span class="panel-title" id="adRatio">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="ad-bar" id="adBar"></div>
+          <div class="ad-labels" id="adLabels"></div>
+          <div style="margin-top:22px">
+            <div class="panel-title" style="margin-bottom:12px">Trend participation</div>
+            <div id="participation"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Bull score distribution</span>
+          <span class="panel-title">0 – 9</span>
+        </div>
+        <div class="panel-body">
+          <div class="hist" id="hist"></div>
+          <p style="margin:14px 0 0;color:var(--text-faint);font-size:12px;line-height:1.55">
+            Nine checks per ticker, one point each. A tape stacked to the right is a
+            market where almost everything is working.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<!-- 5 · Sector rotation                                                     -->
+<!-- ====================================================================== -->
+<section class="section" id="rotation">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">02 — Sector rotation</p>
+        <h2>Where the money is going</h2>
+        <p>The eleven pieces of the S&amp;P 500, across six windows. Green all the way
+           across is a genuine trend. Green in one column only is a bounce.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="scroller">
+        <table class="heat" id="heatTable">
+          <thead id="heatHead"></thead>
+          <tbody id="heatBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<!-- 6 · Full matrix                                                         -->
+<!-- ====================================================================== -->
+<section class="section" id="matrix">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">03 — Full matrix</p>
+        <h2>Every indicator, every ticker</h2>
+        <p>Click any column heading to sort. Click a row to open the full read-out,
+           with the price chart and today's headlines.</p>
+      </div>
+      <div class="filters">
+        <input class="search" id="matrixSearch" type="search" placeholder="Filter ticker…" autocomplete="off">
+        <button class="pill on" data-group="all">All</button>
+        <button class="pill" data-group="sectors">Sectors</button>
+        <button class="pill" data-group="indices">Index</button>
+        <button class="pill" data-group="stocks">Stocks</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="scroller" style="max-height:76vh">
+        <table id="matrixTable">
+          <thead id="matrixHead"></thead>
+          <tbody id="matrixBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<!-- 7 · Signals + leaders                                                   -->
+<!-- ====================================================================== -->
+<section class="section" id="signals">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">04 — What changed</p>
+        <h2>Signals fired today</h2>
+        <p>Only the names where something actually happened — a crossover, a band
+           break, a volume spike, a new high. Everything else was quiet.</p>
+      </div>
+    </div>
+
+    <div class="pulse-grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Event feed</span>
+          <span class="panel-title" id="signalCount">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="feed" id="feed"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title">Strongest &amp; weakest</span></div>
+        <div class="panel-body" id="leaders"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<!-- 8 · News wall                                                           -->
+<!-- ====================================================================== -->
+<section class="section" id="newswall">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <p class="kicker">05 — Headlines</p>
+        <h2>What is being written about the movers</h2>
+        <p>The most recent stories on the names that moved most today. These are the
+           same three links that go into each row of the spreadsheet.</p>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-body" id="newsWall"></div></div>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<!-- 9 · Footer                                                              -->
+<!-- ====================================================================== -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h4>About</h4>
+        <p style="margin:0 0 14px">
+          A daily stock analysis workbook, built from free public data and published
+          automatically. The spreadsheet keeps the exact layout of the hand-built
+          original and adds a dashboard, a sector rotation map, a signals tab and a
+          plain-English guide to every column.
+        </p>
+        <p style="margin:0;font-family:var(--mono);font-size:12px">
+          Indicators: EMA 8 / 21 · DMA 50 / 100 / 200 · Bollinger 20, 2 ·
+          MACD 12 / 26 / 9 · Volume MA 20 · RSI 14 · ATR 14
+        </p>
+      </div>
+      <div>
+        <h4>Build it yourself</h4>
+        <ul>
+          <li><a href="stock_analysis.py" download>Download stock_analysis.py</a></li>
+          <li><a href="requirements.txt" download>requirements.txt</a></li>
+          <li><a href="watchlist.json" download>watchlist.json</a></li>
+          <li><a href="data/latest.json">Today's raw data (JSON)</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Run it</h4>
+        <ul style="font-family:var(--mono);font-size:12px">
+          <li>pip install -r requirements.txt</li>
+          <li>python stock_analysis.py</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <b>Not investment advice.</b> This is a charting and bookkeeping tool. Every number
+      here is arithmetic on past prices from Yahoo Finance, which may be delayed,
+      adjusted or wrong. Nothing on this page is a recommendation to buy or sell
+      anything. Check prices with your broker before acting on them.
+    </div>
+  </div>
+</footer>
+
+<!-- drawer -->
+<div class="drawer-scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-head" id="drawerHead"></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Everything the daily workbook needs. All free, no accounts, no API keys.
+yfinance>=0.2.40
+pandas>=2.0
+openpyxl>=3.1
+requests>=2.31
