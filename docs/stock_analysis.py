@@ -417,7 +417,10 @@ def analyse(ticker: str, df: pd.DataFrame, asof: pd.Timestamp,
 
     ema_f = ema(close, cfg["ema_fast"])
     ema_s = ema(close, cfg["ema_slow"])
-    smas = {p: sma(close, p) for p in cfg["sma_periods"]}
+    # The sheet has fixed columns for the 50, 100 and 200 day averages, so those
+    # are always computed whatever else the watchlist asks for.
+    sma_periods = sorted(set(cfg["sma_periods"]) | {50, 100, 200})
+    smas = {p: sma(close, p) for p in sma_periods}
 
     fast, slow, sig_span = cfg["macd"]
     macd_line = ema(close, fast) - ema(close, slow)
@@ -798,7 +801,8 @@ def header_rows(ws: Worksheet):
         ws.column_dimensions[get_column_letter(n)].width = width
 
 
-def conditional_formats(ws: Worksheet, first: int, last: int):
+def conditional_formats(ws: Worksheet, first: int, last: int,
+                        blocks: Optional[List[tuple]] = None):
     """Live rules, so the colours follow along if a cell is edited by hand."""
     if last < first:
         return
@@ -837,10 +841,15 @@ def conditional_formats(ws: Worksheet, first: int, last: int):
         start_type="num", start_value=0, end_type="num", end_value=9,
         color="2FA45C", showValue=True, minLength=None, maxLength=None))
 
-    ws.conditional_formatting.add(rng("strength"), ColorScaleRule(
-        start_type="min", start_color="8FD9A8",
-        mid_type="percentile", mid_value=50, mid_color="FFF7C2",
-        end_type="max", end_color="F8B4B4"))
+    # Rank is graded inside each block, because being 11th of eleven sectors and
+    # 11th of twenty-five stocks are not the same thing.
+    strength_col = get_column_letter(COL_INDEX["strength"])
+    for block_first, block_last in (blocks or [(first, last)]):
+        ws.conditional_formatting.add(
+            f"{strength_col}{block_first}:{strength_col}{block_last}",
+            ColorScaleRule(start_type="min", start_color="8FD9A8",
+                           mid_type="percentile", mid_value=50, mid_color="FFF7C2",
+                           end_type="max", end_color="F8B4B4"))
 
     ws.conditional_formatting.add(rng("rsi"), ColorScaleRule(
         start_type="num", start_value=30, start_color="8FD9A8",
@@ -914,6 +923,7 @@ def build_day_sheet(wb: Workbook, sheet_name: str, rows: List[Dict[str, Any]],
     # were already there, and the first label sits on row 4, above the headers.
     r = 7
     first_data = r
+    blocks: List[tuple] = []
 
     for n_group, (gkey, gtitle, items) in enumerate(rows_by_group(rows)):
         # The first block needs no spacer -- its label sits on row 4. Every later
@@ -921,13 +931,15 @@ def build_day_sheet(wb: Workbook, sheet_name: str, rows: List[Dict[str, Any]],
         section_divider(ws, 4 if n_group == 0 else r, gkey, gtitle, len(items))
         if n_group > 0:
             r += 1
+        block_first = r
         for n, item in enumerate(items, start=1):
             write_row(ws, r, n, item, news, profiles, zebra=(n % 2 == 0),
                       accent=SECTION_FILLS.get(gkey, SUBTLE))
             r += 1
+        blocks.append((block_first, r - 1))
 
     last_data = r - 1
-    conditional_formats(ws, first_data, last_data)
+    conditional_formats(ws, first_data, last_data, blocks)
 
     ws.freeze_panes = "C7"
     ws.sheet_view.showGridLines = False
@@ -940,14 +952,19 @@ SECTION_INK = {"sectors": "1E3A5F", "indices": "0F5132", "stocks": "5B21B6"}
 
 
 def section_divider(ws: Worksheet, row: int, gkey: str, title: str, count: int):
-    """A slim coloured tab that names the block of tickers underneath it."""
+    """
+    A slim coloured bar naming the block of tickers underneath it.
+
+    Deliberately unmerged: this row sits inside the auto-filter range, and a
+    merged range in there makes Excel offer to repair the file on open. The
+    label is written into column B and simply overflows across the bar.
+    """
     ink = SECTION_INK.get(gkey, INK)
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
-    put(ws, row, 1, title, bold=True, size=9.5, colour="FFFFFF", fill=ink,
-        align="center", border=False)
-    ws.cell(row=row, column=2).fill = PatternFill("solid", fgColor=ink)
-    put(ws, row, 3, f"{count} tickers", size=9, colour=LABEL_GREY,
-        align="left", italic=True, border=False)
+    put(ws, row, 1, None, fill=ink, border=False)
+    put(ws, row, 2, f"{title}   ({count})", bold=True, size=9.5, colour="FFFFFF",
+        fill=ink, align="left", border=False)
+    for c in range(3, COL_INDEX["verdict"] + 1):
+        ws.cell(row=row, column=c).fill = PatternFill("solid", fgColor=ink)
     ws.row_dimensions[row].height = 14
 
 
@@ -1115,7 +1132,7 @@ def build_dashboard(wb: Workbook, rows: List[Dict[str, Any]], asof_label: str,
     ws.conditional_formatting.add(f"F{start + 2}:F{end}", DataBarRule(
         start_type="num", start_value=0, end_type="num", end_value=9,
         color="2FA45C", showValue=True))
-    for letter in ("J", "K"):
+    for letter in ("I", "J"):
         ws.conditional_formatting.add(f"{letter}{start + 2}:{letter}{end}", ColorScaleRule(
             start_type="percentile", start_value=10, start_color="F8B4B4",
             mid_type="num", mid_value=0, mid_color="FFFFFF",
